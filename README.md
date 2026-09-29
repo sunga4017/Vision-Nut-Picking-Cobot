@@ -1,13 +1,24 @@
-# cobot2
+# Vision-Nut-Picking-Cobot
 
-음성 기반 견과류 픽 앤 플레이스 데모. Doosan M0609 6-DOF cobot에 OnRobot RG2 그리퍼, Intel RealSense 카메라, 그리고 Arduino로 제어되는 stepper 컨베이어를 결합한 ROS 2 시스템.
+사용자의 직업과 포만감을 음성으로 입력받아 맞춤 견과류를 추천하고, Doosan M0609 협동로봇이 Vision 기반으로 견과류를 Pick-and-Place한 뒤 컨베이어를 통해 전달하는 ROS 2 기반 자동화 시스템입니다.
+
+## 담당 역할 및 주요 기여
+
+- 견과류 탐지를 위한 YOLO 기반 OBB 객체 탐지 모델 개발에 참여하여 데이터 수집·라벨링, polygon 기반 재라벨링, 반복 학습 및 모델 성능 비교 실험을 수행했습니다.
+- Python 음성 추천 파이프라인에서 LangChain의 `ChatOpenAI`를 통해 OpenAI GPT-4o API를 연동하고, 사용자의 자연어 입력에서 직업·포만감을 분석해 견과류 종류·수량 및 추천 근거를 생성하는 로직을 구현했습니다.
+- 단순 음성 명령을 넘어 STT → LLM 분석 → 후속 질문 → 사용자 응답 → 추천 → TTS/UI로 이어지는 양방향 상호작용 흐름을 설계·개선했습니다.
+- ROS2·YOLO Object Detection용 Docker 실행환경을 구축하고, 음성·로봇 제어 등 OD와 무관한 의존성을 제외한 전용 컨테이너 구조로 재구성했습니다.
+
+**Technical Deep Dive:** [Notion](https://capable-moss-bbd.notion.site/Technical-Deep-Dive-2-3e046f508ab380f5bf03dc062896cfbc?pvs=74)
+
+---
 
 ## 동작 개요
 
 1. 사용자가 웹 UI(또는 CLI)에서 음성 세션을 시작한다.
-2. Wake word 감지 후 시스템이 사용자에게 **컨디션**과 **강도**를 TTS로 묻는다.
-3. STT(Whisper)가 사용자의 답변을 전사하고, 키워드/카테고리 분석기가 답변을 매핑한다.
-4. 콤보 룰 엔진이 견과류 주문 리스트를 생성해 `cobot_voice/output/latest_order.json` 및 백엔드(Firestore 또는 Supabase)에 기록한다.
+2. Wake word 감지 후 시스템이 사용자에게 **직업**과 **현재 포만감**을 TTS로 질문한다.
+3. STT(Whisper)가 사용자의 답변을 전사하고, LLM이 자연어 입력에서 직업 특성과 포만감 수준을 분석한다.
+4. 분석 결과를 기반으로 견과류 종류와 수량을 결정하고, 추천 결과와 세션 상태를 Supabase에 기록한다.
 5. `task_manager_node`가 주문을 읽어, 견과류별로 perception → pick → place 사이클을 실행한다.
 6. `robot_control_node`가 픽 시퀀스(approach → grasp → verify_grip → lift → transit → place → retreat → home)를 수행한다.
 7. 컨베이어가 `place_ready` 신호의 엣지에서 한 단위 전진한다.
